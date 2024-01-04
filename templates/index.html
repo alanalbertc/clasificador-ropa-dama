@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Similarity</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .image-container {
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px; /* Añade un espacio entre las imágenes y el formulario */
+        }
+
+        .image-container img {
+            max-width: 100%;
+            height: auto;
+            width: 474px; /* Ancho deseado */
+            height: 632px; /* Alto deseado */
+        }
+    </style>
+</head>
+<body>
+    <h1>Clasificador de ropa</h1>
+
+    <form action="/" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept="image/*" required>
+        <button type="submit">Submit</button>
+    </form>
+
+    {% if img_similar %}
+        <div class="image-container">
+            <div>
+                <h2>Imágen original:</h2>
+                <img src="{{ url_for('static', filename='images/' + input_image) }}" alt="Input Image">
+            </div>
+
+            <div>
+                <h2>Imagen resultado:</h2>
+                <img src="{{ url_for('static', filename='dataset/' + class_prediction + '/' + img_similar) }}" alt="Most Similar Image">
+            </div>
+        </div>
+    {% endif %}
+</body>
+</html>
