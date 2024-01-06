@@ -188,9 +188,9 @@ def distancia_manhattan(features1, features2):
 
 import pandas as pd
 
-def buscar_imagen_similar(img_features, collection, class_number):
+def buscar_imagen_similar(img_features, collection, class_name):
     # Realizar la consulta MongoDB y almacenar los resultados en una lista
-    resultados = list(collection.find({'class': class_number}))
+    resultados = list(collection.find({'class': class_name}))
     print(f"len(resultados): {len(resultados)}")    #debug
     
 
@@ -268,7 +268,7 @@ def realizar_prediccion(ruta_img):
     collection = db['features']
 
     # Encontrar a la imágen más similar dentro de la clase 
-    result_image = buscar_imagen_similar(caracteristicas_img, collection, class_number)
+    result_image = buscar_imagen_similar(caracteristicas_img, collection, class_prediction)
     print(f'IMAGEN RESULTADO: {result_image}')
     
     return class_prediction, result_image
