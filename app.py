@@ -6,6 +6,8 @@ Versión: 1.0
 """
 
 from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
+from flask_sslify import SSLify
 from werkzeug.utils import secure_filename
 import pandas as pd
 from pymongo import MongoClient
@@ -15,13 +17,16 @@ import cv2 as cv
 import lightgbm as lgb
 from skimage import measure
 from skimage.feature import graycomatrix, graycoprops
-import pythreshold.utils as pyth
+import otsu
 from sklearn.preprocessing import LabelEncoder
 
 app = Flask(__name__)
 
-UPLOAD_FOLDER = r'.\static\images'
-UMBRAL_FOLDER = r'.\static\images\umbraladas'
+CORS(app, resources={r"/*": {"origins": "https://trabajo-terminal-sigma.vercel.app/"}})
+sslify = SSLify(app)
+
+UPLOAD_FOLDER = r'./static/images'
+UMBRAL_FOLDER = r'./static/images/umbraladas'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['UMBRAL_FOLDER'] = UMBRAL_FOLDER
 
@@ -43,7 +48,7 @@ def umbralar_imagen(imagen_path):
 
     # Obtención de los valores mínimos y máximos para colores en HSV
     medianBlur = cv.medianBlur(gray, 7)
-    umbrales = pyth.otsu_multithreshold(medianBlur)
+    umbrales = otsu.otsu_multithreshold(medianBlur)
 
     hist = cv.calcHist([gray], [0], None, [256], [0, 255])
     seccion1 = hist[:umbrales[0]]
@@ -232,7 +237,7 @@ def realizar_prediccion(ruta_img):
     img = cv.resize(img, (SIZE, SIZE)) 
             
     # modelo = lgb.Booster(model_file='static\modelo.txt')
-    modelo = lgb.Booster(model_file='modelo\modelo.txt')
+    modelo = lgb.Booster(model_file='modelo/modelo.txt')
             
     # Extraer características 
     img_umbralada = umbralar_imagen(ruta_img)
@@ -253,19 +258,28 @@ def realizar_prediccion(ruta_img):
     input_img_for_RF = np.reshape(caracteristicas_img_np, (img_np.shape[0], -1))
             
     #Predict
-    print(f"input_img_for_RF.shape: {input_img_for_RF.shape}")
+    print(f"input_img_for_RF.shape: {input_img_for_RF.shape}") 
     class_prediction = modelo.predict(input_img_for_RF) #Utilizando el modelo cargado!!
     print(f"prediction shape: {type(class_prediction.shape)}")
     class_prediction = np.argmax(class_prediction, axis=1)
-    class_number = int(class_prediction)
+    # class_number = int(class_prediction)
     class_prediction = str(le.inverse_transform(class_prediction.ravel())[0])  #Reverse the label encoder to original name
     print("The prediction for this image is: ", class_prediction)
     
     # Conectar a MongoDB
     # Cambiar campos <conection_string> por la cadena de conexión a MongoDB
-    client = MongoClient('<conection_string>')
-    db = client['clothes']
-    collection = db['features']
+    try:
+    
+        client = MongoClient('mongodb+srv://admin:kE_ODa085Kro%5CA@clasificador-cluster.jjkxafo.mongodb.net/')
+        db = client['clothes']
+        collection = db['features']
+        
+        print('Conexión exitosa a MongoDB')
+        
+        print(f'size(collection): {collection.find().count()}')
+    
+    except Exception as e:
+        print(f'Error al conectar a MongoDB {e}')
 
     # Encontrar a la imágen más similar dentro de la clase 
     result_image = buscar_imagen_similar(caracteristicas_img, collection, class_prediction)
@@ -295,9 +309,26 @@ def index():
             class_prediction, img_similar = realizar_prediccion(file_path)
 
             # return render_template('index.html', result_image=result_image)
-            return render_template('index.html', input_image=filename, class_prediction=class_prediction, img_similar=img_similar)
+            # return render_template('index.html', input_image=filename, class_prediction=class_prediction, img_similar=img_similar)
+            
+            # La ruta del servidor se establece desde el front
+            # ruta_servidor = 'http://20.241.183.28:5000'
+            # ruta_servidor = 'http://127.0.0.1:5000'
+            
+            ruta_front = 'static/dataset/' + class_prediction + '/'+ img_similar
+            return jsonify({'img_similar': ruta_front})
+            # return jsonify({'error': 'No selected file'})
+            # get_img(): Regresar ruta completa (ya construida)
+                # Formato json con atributo ruta {nombre_atributo_ruta: 'asdfsd/sdfsd'}
+            # Cross-origin: checar si deja acceder al dataset
+                # Hay que avisarle al backend que se va a acceder desde fuera
+                # Lista blanca de los lugares
+            # Post-man: regresar imágen
+            # fetch: construir la ruta y mandarla
+            #  
 
     return render_template('index.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)  #Se define 0.0.0.0 para docker
