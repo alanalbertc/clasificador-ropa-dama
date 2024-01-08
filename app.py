@@ -22,8 +22,7 @@ from sklearn.preprocessing import LabelEncoder
 
 app = Flask(__name__)
 
-# CORS(app, resources={r"/*": {"origins": "https://trabajo-terminal-sigma.vercel.app/"}})
-# sslify = SSLify(app)
+CORS(app, resources={r"/api/*": {"origins": "https://trabajo-terminal-sigma.vercel.app/"}})
 
 UPLOAD_FOLDER = r'./static/images'
 UMBRAL_FOLDER = r'./static/images/umbraladas'
