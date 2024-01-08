@@ -22,8 +22,8 @@ from sklearn.preprocessing import LabelEncoder
 
 app = Flask(__name__)
 
-CORS(app, resources={r"/*": {"origins": "https://trabajo-terminal-sigma.vercel.app/"}})
-sslify = SSLify(app)
+# CORS(app, resources={r"/*": {"origins": "https://trabajo-terminal-sigma.vercel.app/"}})
+# sslify = SSLify(app)
 
 UPLOAD_FOLDER = r'./static/images'
 UMBRAL_FOLDER = r'./static/images/umbraladas'
@@ -37,13 +37,13 @@ def extension_permitida(archivo):
     return '.' in archivo and archivo.rsplit('.', 1)[1].lower() in ESTENSIONES_PERMITIDAS
 
 
-def umbralar_imagen(imagen_path):
+def umbralar_imagen(image):
     
-    if(not extension_permitida(imagen_path)):
-        print('Extensión de imágen no válida')
+    # if(not extension_permitida(imagen_path)):
+    #     print('Extensión de imágen no válida')
 
     # Leer la imagen
-    image = cv.imread(imagen_path)
+    # image = cv.imread(imagen_path)
     gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
 
     # Obtención de los valores mínimos y máximos para colores en HSV
@@ -222,7 +222,7 @@ def buscar_imagen_similar(img_features, collection, class_name):
 
     return most_similar_img
 
-def realizar_prediccion(ruta_img):
+def realizar_prediccion(img):
     SIZE = 128
     
     clases = ['black_dress', 'blue_dress', 'red_dress', 'white_dress']
@@ -233,14 +233,14 @@ def realizar_prediccion(ruta_img):
     le.transform(clases)
     
     # Leer imágen y reajustar el tamaño       
-    img = cv.imread(ruta_img)
+    # img = cv.imread(ruta_img)
     img = cv.resize(img, (SIZE, SIZE)) 
             
     # modelo = lgb.Booster(model_file='static\modelo.txt')
     modelo = lgb.Booster(model_file='modelo/modelo.txt')
             
     # Extraer características 
-    img_umbralada = umbralar_imagen(ruta_img)
+    img_umbralada = umbralar_imagen(img)
     # Guardar imagen umbralada
     umbral_filename = f"umbral_0.jpg"
     umbral_file_path = os.path.join(app.config['UMBRAL_FOLDER'], umbral_filename)
@@ -288,6 +288,18 @@ def realizar_prediccion(ruta_img):
     return class_prediction, result_image
 
 
+def process_image(file):
+    # Leer la imagen como datos binarios
+    image_data = file.read()
+
+    # Decodificar los datos binarios y convertirlos en una matriz NumPy
+    nparr = np.frombuffer(image_data, np.uint8)
+    img = cv.imdecode(nparr, cv.IMREAD_COLOR)
+
+
+    return img  # Puedes devolver la imagen procesada si es necesario
+
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -301,12 +313,15 @@ def index():
             return jsonify({'error': 'No selected file'})
 
         if file and extension_permitida(file.filename):
-            filename = secure_filename(file.filename)
+            # filename = secure_filename(file.filename)
             # file_path = app.config['UPLOAD_FOLDER'] + '/' + filename
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
+            # file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            # file.save(file_path)
             
-            class_prediction, img_similar = realizar_prediccion(file_path)
+            # Procesar la imagen sin guardarla físicamente en el sistema de archivos
+            processed_image = process_image(file)
+            
+            class_prediction, img_similar = realizar_prediccion(processed_image)
 
             # return render_template('index.html', result_image=result_image)
             # return render_template('index.html', input_image=filename, class_prediction=class_prediction, img_similar=img_similar)
